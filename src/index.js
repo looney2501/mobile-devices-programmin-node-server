@@ -66,7 +66,7 @@ router.get('/hotels', ctx => {
 
 const createItem = async (ctx) => {
   const hotel = ctx.request.body
-  if (!hotel.name || !hotel.capacity || !hotel.isAvailable || !hotel.dateRegistered) { // validation
+  if (!hotel.name || !hotel.capacity || hotel.isAvailable == null || !hotel.dateRegistered) { // validation
     ctx.response.body = {issue: [{error: 'Attributes are missing'}]}
     ctx.response.status = 400 //  BAD REQUEST
     return
