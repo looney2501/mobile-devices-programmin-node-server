@@ -66,7 +66,7 @@ router.get('/hotels', ctx => {
 
 const createItem = async (ctx) => {
   const hotel = ctx.request.body
-  if (!hotel.name || !hotel.capacity || hotel.isAvailable == null || !hotel.dateRegistered) { // validation
+  if (hotel.name == null || hotel.capacity == null || hotel.isAvailable == null || hotel.dateRegistered == null) { // validation
     ctx.response.body = {issue: [{error: 'Attributes are missing'}]}
     ctx.response.status = 400 //  BAD REQUEST
     return
@@ -74,9 +74,10 @@ const createItem = async (ctx) => {
   hotel.id = `${parseInt(lastId) + 1}`
   lastId = hotel.id
   hotels.push(hotel)
+  console.log(hotel)
   ctx.response.body = hotel
   ctx.response.status = 201 // CREATED
-  broadcast({event: 'created', payload: {item: hotel}})
+  broadcast({event: 'created', payload: {hotel: hotel}})
 }
 
 router.post('/hotels', async (ctx) => {
@@ -95,10 +96,9 @@ router.post('/hotels', async (ctx) => {
 //     dateRegistered: new Date(Date.now() + newId)
 //   })
 //   hotels.push(hotel)
-//   console.log(`
-//    ${hotel.name}`)
-//   broadcast({event: 'created', payload: {item: hotel}})
-// }, 1000)
+//   console.log(`${hotel.name}`)
+//   broadcast({event: 'created', payload: {hotel: hotel}})
+// }, 3000)
 
 app.use(router.routes())
 app.use(router.allowedMethods())
