@@ -1,106 +1,39 @@
-const Koa = require('koa')
+import Koa from 'koa'
+import WebSocket from 'ws'
+import http from 'http'
+import Router from 'koa-router'
+import bodyParser from 'koa-bodyparser'
+import { timingLogger, exceptionHandler, jwtConfig, initWss, ver } from './utils'
+import { router as hotelRouter } from './hotel'
+import { router as authRouter } from './auth'
+import jwt from 'koa-jwt'
+import cors from '@koa/cors'
+
 const app = new Koa()
-const server = require('http').createServer(app.callback())
-const WebSocket = require('ws')
-const wss = new WebSocket.Server({server})
-const Router = require('koa-router')
-const cors = require('koa-cors')
-const bodyparser = require('koa-bodyparser')
+const server = http.createServer(app.callback())
+const wss = new WebSocket.Server({ server })
+initWss(wss)
 
-app.use(bodyparser())
 app.use(cors())
-app.use(async (ctx, next) => {
-  const start = new Date()
-  await next()
-  const ms = new Date() - start
-  console.log(`${ctx.method} ${ctx.url} ${ctx.response.status} - ${ms}ms`)
-})
+app.use(timingLogger)
+app.use(exceptionHandler)
+app.use(bodyParser())
 
-app.use(async (ctx, next) => {
-  await new Promise(resolve => setTimeout(resolve, 2000))
-  await next()
-})
+const prefix = '/api'
 
-app.use(async (ctx, next) => {
-  try {
-    await next()
-  } catch (err) {
-    ctx.response.body = {issue: [{error: err.message || 'Unexpected error'}]}
-    ctx.response.status = 500
-  }
-})
+//public
+const publicApiRouter = new Router({ prefix })
+publicApiRouter.use('/auth', authRouter.routes())
+app.use(publicApiRouter.routes())
+  .use(publicApiRouter.allowedMethods())
 
-class Hotel {
-  constructor({id, name, capacity, isAvailable, dateRegistered}) {
-    this.id = id
-    this.name = name
-    this.capacity = capacity
-    this.isAvailable = isAvailable
-    this.dateRegistered = dateRegistered
-  }
-}
+app.use(jwt(jwtConfig))
 
-const hotels = []
-for (let i = 0; i < 4; i++) {
-  hotels.push(new Hotel({
-    id: `${i}`, name: `Hotel ${i}`,
-    capacity: i * 100, isAvailable: i % 2 === 0,
-    dateRegistered: new Date(Date.now() + i)
-  }))
-}
-let lastId = hotels[hotels.length - 1].id
-
-const broadcast = data =>
-  wss.clients.forEach(client => {
-    if (client.readyState === WebSocket.OPEN) {
-      client.send(JSON.stringify(data))
-    }
-  })
-
-const router = new Router()
-
-router.get('/hotels', ctx => {
-  ctx.response.body = hotels
-  ctx.response.status = 200
-})
-
-const createItem = async (ctx) => {
-  const hotel = ctx.request.body
-  if (hotel.name == null || hotel.capacity == null || hotel.isAvailable == null || hotel.dateRegistered == null) { // validation
-    ctx.response.body = {issue: [{error: 'Attributes are missing'}]}
-    ctx.response.status = 400 //  BAD REQUEST
-    return
-  }
-  hotel.id = `${parseInt(lastId) + 1}`
-  lastId = hotel.id
-  hotels.push(hotel)
-  console.log(hotel)
-  ctx.response.body = hotel
-  ctx.response.status = 201 // CREATED
-  broadcast({event: 'created', payload: {hotel: hotel}})
-}
-
-router.post('/hotels', async (ctx) => {
-  await createItem(ctx)
-})
-
-
-// setInterval(() => {
-//   lastId = `${parseInt(lastId) + 1}`
-//   const newId = lastId + 1
-//   const hotel = new Hotel({
-//     id: newId,
-//     name: `Hotel ${newId}`,
-//     capacity: lastId * 100,
-//     isAvailable: newId % 2 === 0,
-//     dateRegistered: new Date(Date.now() + newId)
-//   })
-//   hotels.push(hotel)
-//   console.log(`${hotel.name}`)
-//   broadcast({event: 'created', payload: {hotel: hotel}})
-// }, 3000)
-
-app.use(router.routes())
-app.use(router.allowedMethods())
+//protected
+const protectedApiRouter = new Router({ prefix })
+protectedApiRouter.use('/hotels', hotelRouter.routes())
+app.use(protectedApiRouter.routes())
+  .use(protectedApiRouter.allowedMethods())
 
 server.listen(3000)
+console.log('started on port 3000')
