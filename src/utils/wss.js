@@ -9,7 +9,7 @@ export const initWss = value => {
   wss.on('connection', ws => {
     ws.on('message', message => {
       const { type, payload: { token } } = JSON.parse(message)
-      if (type !== 'authentication') {
+      if (type !== 'authorization') {
         ws.close()
         return
       }
