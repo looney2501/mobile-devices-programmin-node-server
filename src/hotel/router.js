@@ -15,9 +15,10 @@ const createHotel = async (ctx, hotel, response) => {
   try {
     const userId = ctx.state.user._id
     hotel.userId = userId
-    response.body = await hotelStore.insert(hotel)
+    const insertedHotel = await hotelStore.insert(hotel)
+    response.body = insertedHotel
     response.status = 201 //created
-    broadcast(userId, { event: 'created', payload: { hotel: hotel } })
+    broadcast(userId, { event: 'created', payload: { hotel: insertedHotel } })
   } catch (e) {
     response.body = { message: e.message }
     response.status = 400 //bad request
