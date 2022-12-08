@@ -10,7 +10,7 @@ export class HotelStore {
   }
 
   async insert(hotel) {
-    if (hotel.name == null || hotel.capacity == null || hotel.isAvailable == null || hotel.dateRegistered == null) { // validation
+    if (hotel.name == null || hotel.capacity == null || hotel.isAvailable == null || hotel.dateRegistered == null || hotel.location == null) { // validation
       throw new Error('Missing attributes')
     }
     return this.store.insert(hotel)
