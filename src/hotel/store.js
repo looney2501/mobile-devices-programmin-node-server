@@ -10,10 +10,15 @@ export class HotelStore {
   }
 
   async insert(hotel) {
-    if (hotel.name == null || hotel.capacity == null || hotel.isAvailable == null || hotel.dateRegistered == null || hotel.location == null) { // validation
+    if (hotel.name == null || hotel.capacity == null || hotel.isAvailable == null || hotel.dateRegistered == null) { // validation
       throw new Error('Missing attributes')
     }
+    delete hotel['_id']
     return this.store.insert(hotel)
+  }
+
+  async update(props, item) {
+    return this.store.update(props, item);
   }
 }
 
